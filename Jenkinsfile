@@ -16,10 +16,9 @@ pipeline {
         stage('Setup Python Environment') {
             steps {
                 sh '''
-                    python3 -m venv venv
-                    . venv/bin/activate
-                    pip install --upgrade pip
-                    pip install -r requirements.txt
+                    python3 -m venv ${VENV}
+                    ${VENV}/bin/pip install --upgrade pip
+                    ${VENV}/bin/pip install -r requirements.txt
                 '''
             }
         }
@@ -27,8 +26,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 sh '''
-                    . venv/bin/activate
-                    pytest || true
+                    ${VENV}/bin/pytest || true
                 '''
             }
         }
@@ -36,7 +34,21 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
+                    // Option 1: If sonar-scanner is installed on Jenkins container
                     sh 'sonar-scanner'
+
+                    // Option 2: If using Dockerized SonarScanner, uncomment this:
+                    /*
+                    docker.image('sonarsource/sonar-scanner-cli:5').inside('--network jenkins-sonar') {
+                        sh '''
+                            sonar-scanner \
+                            -Dsonar.projectKey=fastapi-jenkins-demo \
+                            -Dsonar.sources=. \
+                            -Dsonar.host.url=http://sonarqube:9000 \
+                            -Dsonar.login=${SONAR_AUTH_TOKEN}
+                        '''
+                    }
+                    */
                 }
             }
         }
