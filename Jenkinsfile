@@ -5,6 +5,10 @@ pipeline {
         VENV = "venv"
     }
 
+    tools {
+        sonarQube 'SonarScanner'
+    }
+
     stages {
 
         stage('Checkout') {
@@ -33,16 +37,14 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                script {
-                    docker.image('sonarsource/sonar-scanner-cli:5').inside('--network jenkins-sonar') {
-                        sh '''
-                            sonar-scanner \
-                            -Dsonar.projectKey=fastapi-jenkins-demo \
-                            -Dsonar.sources=. \
-                            -Dsonar.host.url=http://localhost:9000 \
-                            -Dsonar.login=$SONAR_AUTH_TOKEN
-                        '''
-                    }
+                withSonarQubeEnv('SonarQube') {
+                    sh '''
+                        sonar-scanner \
+                        -Dsonar.projectKey=fastapi-jenkins-demo \
+                        -Dsonar.sources=. \
+                        -Dsonar.host.url=http://localhost:9000 \
+                        -Dsonar.login=$SONAR_AUTH_TOKEN
+                    '''
                 }
             }
         }
