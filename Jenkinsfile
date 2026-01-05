@@ -1,19 +1,17 @@
 pipeline {
     agent any
 
-    tools {
-        sonarQube 'SonarScanner'
-    }
-
     stages {
+
         stage('Checkout') {
             steps {
-                git 'https://github.com/Keerthiga-S/Jenkins_Sonarqube.git'
+                git url: 'https://github.com/Keerthiga-S/Jenkins_Sonarqube.git', branch: 'main'
             }
         }
 
         stage('Install Dependencies') {
             steps {
+                bat 'python -m pip install --upgrade pip'
                 bat 'pip install -r requirements.txt'
             }
         }
