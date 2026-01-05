@@ -1,46 +1,33 @@
 pipeline {
     agent any
 
-    environment {
-        VENV = "venv"
+    tools {
+        sonarQube 'SonarScanner'
     }
 
     stages {
-
         stage('Checkout') {
             steps {
-                checkout scm
+                git 'https://github.com/Keerthiga-S/Jenkins_Sonarqube.git'
             }
         }
 
-        stage('Setup Python Environment') {
+        stage('Install Dependencies') {
             steps {
-                sh '''
-                    python3 -m venv ${VENV}
-                    ${VENV}/bin/pip install --upgrade pip
-                    ${VENV}/bin/pip install -r requirements.txt
-                '''
+                bat 'pip install -r requirements.txt'
             }
         }
 
         stage('Run Tests') {
             steps {
-                sh '''
-                    ${VENV}/bin/pytest || true
-                '''
+                bat 'pytest'
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
-                docker.image('sonarsource/sonar-scanner-cli:5').inside('--network jenkins-sonar') {
-                    sh '''
-                        sonar-scanner \
-                        -Dsonar.projectKey=fastapi-jenkins-demo \
-                        -Dsonar.sources=. \
-                        -Dsonar.host.url=http://sonarqube:9000 \
-                        -Dsonar.login=$SONAR_AUTH_TOKEN
-                    '''
+                withSonarQubeEnv('SonarQube') {
+                    bat 'sonar-scanner'
                 }
             }
         }
