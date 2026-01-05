@@ -3,7 +3,6 @@ pipeline {
 
     environment {
         VENV = "venv"
-        SONAR_SCANNER = tool name: 'MyScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
     }
 
     stages {
@@ -16,53 +15,30 @@ pipeline {
 
         stage('Setup Python Environment') {
             steps {
-                sh """
-                    python3 -m venv ${VENV}
-                    . ${VENV}/bin/activate
+                sh '''
+                    python3 -m venv venv
+                    . venv/bin/activate
                     pip install --upgrade pip
                     pip install -r requirements.txt
-                """
+                '''
             }
         }
 
         stage('Run Tests') {
             steps {
-                sh """
-                    . ${VENV}/bin/activate
-                    pytest --junitxml=pytest-report.xml || true
-                """
+                sh '''
+                    . venv/bin/activate
+                    pytest || true
+                '''
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('MySonar') {
-                    sh """
-                        ${SONAR_SCANNER}/bin/sonar-scanner \
-                        -Dsonar.projectKey=my-fastapi \
-                        -Dsonar.sources=. \
-                        -Dsonar.python.coverage.reportPaths=pytest-report.xml \
-                        -Dsonar.host.url=$SONAR_HOST_URL \
-                        -Dsonar.login=$SONAR_AUTH_TOKEN
-                    """
+                withSonarQubeEnv('SonarQube') {
+                    sh 'sonar-scanner'
                 }
             }
-        }
-
-        stage('Deploy') {
-            steps {
-                sh """
-                    . ${VENV}/bin/activate
-                    echo "Deploying Application..."
-                """
-            }
-        }
-    }
-
-    post {
-        always {
-            echo "Cleaning workspace..."
-            deleteDir()
         }
     }
 }
