@@ -2,51 +2,51 @@ pipeline {
     agent any
 
     environment {
-        VENV = "venv"
-    }
-
-    tools {
-        sonarQube 'SonarScanner'
+        DOCKER_IMAGE = "fastapi_app_image"
+        SONARQUBE = 'SonarQube'  // Name of SonarQube server in Jenkins config
     }
 
     stages {
-
         stage('Checkout') {
             steps {
-                checkout scm
+                git 'https://github.com/your-repo/fastapi_app.git'  // Replace with your repo
             }
         }
 
-        stage('Setup Python Environment') {
+        stage('SonarQube Scan') {
             steps {
-                sh '''
-                    python3 -m venv ${VENV}
-                    ${VENV}/bin/pip install --upgrade pip
-                    ${VENV}/bin/pip install -r requirements.txt
-                '''
-            }
-        }
-
-        stage('Run Tests') {
-            steps {
-                sh '''
-                    ${VENV}/bin/pytest || true
-                '''
-            }
-        }
-
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('SonarQube') {
-                    sh '''
-                        sonar-scanner \
-                        -Dsonar.projectKey=fastapi-jenkins-demo \
-                        -Dsonar.sources=. \
-                        -Dsonar.host.url=http://localhost:9000 \
-                        -Dsonar.login=$SONAR_AUTH_TOKEN
-                    '''
+                withSonarQubeEnv("${SONARQUBE}") {
+                    sh 'sonar-scanner'
                 }
             }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t $DOCKER_IMAGE .'
+            }
+        }
+
+        stage('Test Docker Container') {
+            steps {
+                sh 'docker run -d --name fastapi_test -p 8000:8000 $DOCKER_IMAGE'
+                sleep 10
+                sh 'curl -f http://localhost:8000/'
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh 'docker stop fastapi_test || true'
+                sh 'docker rm fastapi_test || true'
+                sh 'docker run -d --name fastapi_app -p 8000:8000 $DOCKER_IMAGE'
+            }
+        }
+    }
+
+    post {
+        always {
+            sh 'docker ps -a'
         }
     }
 }
