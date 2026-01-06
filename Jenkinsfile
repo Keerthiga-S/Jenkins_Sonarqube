@@ -60,14 +60,11 @@ pipeline {
     }
 
     post {
-        always {
-            sh "docker rm -f ${CONTAINER_NAME} || true"
-        }
         success {
-            echo "✅ Pipeline succeeded!"
+            echo "Deployment successful – container is running"
         }
         failure {
-            echo "❌ Pipeline failed!"
+           sh "docker rm -f ${CONTAINER_NAME} || true"
         }
     }
 }
