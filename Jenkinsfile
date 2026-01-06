@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         // SonarQube token you generated
-        SONAR_TOKEN = 'YOUR_SONAR_TOKEN'
+        SONAR_TOKEN = 'squ_2667087f56a0763a5d3770c196ad37a02de4e363'
         // Docker image name
         IMAGE_NAME = 'fastapi_app'
         // Docker container name for testing
