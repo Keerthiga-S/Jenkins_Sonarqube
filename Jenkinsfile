@@ -1,70 +1,41 @@
 pipeline {
     agent any
 
-    environment {
-        SONAR_TOKEN     = 'squ_2667087f56a0763a5d3770c196ad37a02de4e363'
-        IMAGE_NAME      = 'fastapi_app'
-        CONTAINER_NAME  = 'fastapi_test_container'
+    tools {
+        sonarQube 'sonar-scanner'
     }
 
     stages {
 
-        stage('Checkout SCM') {
+        stage('Checkout') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/Keerthiga-S/Jenkins_Sonarqube.git'
+                git 'https://github.com/Keerthiga-S/Jenkins_Sonarqube.git'
             }
         }
 
-        stage('SonarQube Scan') {
+        stage('Check Raw Files') {
             steps {
-                sh """
-                sonar-scanner \
-                  -Dsonar.projectKey=FastAPIApp \
-                  -Dsonar.sources=. \
-                  -Dsonar.host.url=http://host.docker.internal:9000 \
-                  -Dsonar.login=${SONAR_TOKEN}
-                """
+                sh '''
+                echo "Checking for unwanted files..."
+                find . -type f \\( -name "*.pdf" -o -name "*.docx" -o -name "*.png" -o -name "*.jpg" \\) > raw_files.txt
+                
+                if [ -s raw_files.txt ]; then
+                    echo "Raw files found!"
+                    cat raw_files.txt
+                    exit 1
+                fi
+                '''
             }
         }
 
-        stage('Build Docker Image') {
+        stage('SonarQube Analysis') {
             steps {
-                sh "docker build -t ${IMAGE_NAME}:latest ."
+                withSonarQubeEnv('sonar-server') {
+                    sh '''
+                    sonar-scanner
+                    '''
+                }
             }
-        }
-
-        stage('Test Docker Container') {
-            steps {
-                sh """
-                docker rm -f ${CONTAINER_NAME} || true
-
-                docker run -d --name ${CONTAINER_NAME} -p 8000:8000 ${IMAGE_NAME}:latest
-
-                echo "Waiting for FastAPI to start..."
-                sleep 10
-
-                CONTAINER_IP=\$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CONTAINER_NAME})
-                echo "FastAPI container IP: \$CONTAINER_IP"
-
-                curl -f http://\$CONTAINER_IP:8000 || exit 1
-                """
-            }
-        }
-
-        stage('Deploy') {
-            steps {
-                echo "Deploy stage completed (same container already running)"
-            }
-        }
-    }
-
-    post {
-        success {
-            echo "Deployment successful – container is running"
-        }
-        failure {
-           sh "docker rm -f ${CONTAINER_NAME} || true"
         }
     }
 }
