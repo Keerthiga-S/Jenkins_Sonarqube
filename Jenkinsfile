@@ -22,7 +22,11 @@ pipeline {
             steps {
                 withSonarQubeEnv('sonar-server') {
                     sh '''
-                    sonar-scanner
+                    sonar-scanner \
+                    -Dsonar.projectKey=fastapi-project \
+                    -Dsonar.sources=. \
+                    -Dsonar.host.url=http://host.docker.internal:9000 \
+                    -Dsonar.login=squ_2667087f56a0763a5d3770c196ad37a02de4e363
                     '''
                 }
             }
